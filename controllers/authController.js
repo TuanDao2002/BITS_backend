@@ -54,8 +54,8 @@ const register = async (req, res) => {
         throw new CustomError.BadRequestError("This email already exists");
     }
 
-    if (!avatar) {
-        throw new CustomError.BadRequestError("Please provide avatar image");
+    if (!avatar || !avatar.match(/^https:\/\/res.cloudinary.com\//)) {
+        throw new CustomError.BadRequestError("Please provide a valid avatar image");
     }
 
     const minutesToExpire = 60;
