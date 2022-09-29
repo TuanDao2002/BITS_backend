@@ -45,7 +45,7 @@ const register = async (req, res) => {
         );
     }
 
-    if (validator.isEmail(email)) {
+    if (!validator.isEmail(email)) {
         throw new CustomError.BadRequestError("This email is not valid");
     }
 
@@ -55,7 +55,9 @@ const register = async (req, res) => {
     }
 
     if (!avatar || !avatar.match(/^https:\/\/res.cloudinary.com\//)) {
-        throw new CustomError.BadRequestError("Please provide a valid avatar image");
+        throw new CustomError.BadRequestError(
+            "Please provide a valid avatar image"
+        );
     }
 
     const minutesToExpire = 60;
@@ -81,7 +83,6 @@ const register = async (req, res) => {
     );
 
     res.status(StatusCodes.CREATED).json({
-        role,
         msg: "Please check your email to verify your account!",
     });
 };
@@ -112,7 +113,7 @@ const verifyEmail = async (req, res) => {
         throw new CustomError.UnauthenticatedError("Verification Failed");
     }
 
-    const { username, email, password, expirationDate } = decoded;
+    const { username, email, password, avatar, expirationDate } = decoded;
     const now = new Date();
 
     if (new Date(expirationDate).getTime() <= now.getTime()) {
