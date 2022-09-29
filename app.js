@@ -14,14 +14,8 @@ const app = express();
 // connect DB
 const connectDB = require("./db/connect");
 
-// socket io
-const socketio = require("./socket/socket");
-
 // routers
 const authRouter = require("./routes/authRoutes");
-const userRouter = require("./routes/userRoutes");
-const swipeRouter = require("./routes/swipeRoutes");
-const messageRouter = require("./routes/messageRoutes");
 
 // error handler
 const notFoundMiddleware = require("./middleware/not-found");
@@ -32,7 +26,7 @@ app.use(helmet());
 app.use(
     cors({
         credentials: true,
-        origin: ["https://rmit-tinder.netlify.app", "http://localhost:3000"], // only allow website in this domain too access the resource of this server
+        origin: [process.env.REACT_APP_LINK, "http://localhost:3000"], // only allow website in this domain too access the resource of this server
     })
 );
 app.use(xss());
@@ -54,9 +48,6 @@ cloudinary.config({
 
 // routes
 app.use("/api/auth", authRouter);
-app.use("/api/user", userRouter);
-app.use("/api/swipe", swipeRouter);
-app.use("/api/message", messageRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
@@ -66,11 +57,9 @@ const port = process.env.PORT || 8080;
 const start = async () => {
     try {
         await connectDB(process.env.MONGO_URI);
-        const server = app.listen(port, () =>
+        app.listen(port, () =>
             console.log(`Server is listening on port ${port}...`)
         );
-
-        socketio(server);
     } catch (error) {
         console.log(error);
     }

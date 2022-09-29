@@ -3,12 +3,11 @@ const router = express.Router();
 
 const {
     authenticateUser,
-    authorizePermissions,
 } = require("../middleware/authentication");
 
 const {
     register,
-    createProfile,
+    verifyEmail,
     login,
     logout,
     forgotPassword,
@@ -18,7 +17,7 @@ const {
 const { uploadUserImage } = require("../controllers/imageController");
 
 router.post("/register", register);
-router.post("/createProfile", createProfile);
+router.post("/verify-email", verifyEmail);
 router.post("/upload-image", uploadUserImage);
 router.post("/login", login);
 router.delete("/logout", authenticateUser, logout);

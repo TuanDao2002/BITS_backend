@@ -3,24 +3,23 @@ const CustomError = require("../errors");
 const {
     isTokenValid,
     makeVerificationToken,
-    checkRole,
     sendVerificationEmail,
     createTokenUser,
     attachCookiesToResponse,
     sendResetPasswordEmail,
-    validateRequiredProfileInput,
 } = require("../utils");
 
 const User = require("../models/User");
 const Token = require("../models/Token");
 
+const validator = require("validator");
 const useragent = require("express-useragent");
 const crypto = require("crypto");
 
 const normalCharRegex = /^[A-Za-z0-9._-]*$/;
 
 const register = async (req, res) => {
-    const { username, password, email } = req.body;
+    const { username, password, email, avatar } = req.body;
 
     if (username.length < 1 || username.length > 22) {
         throw new CustomError.BadRequestError(
@@ -46,19 +45,25 @@ const register = async (req, res) => {
         );
     }
 
-    const role = checkRole(email);
+    if (validator.isEmail(email)) {
+        throw new CustomError.BadRequestError("This email is not valid");
+    }
 
     const findEmail = await User.findOne({ email });
     if (findEmail) {
         throw new CustomError.BadRequestError("This email already exists");
     }
 
+    if (!avatar) {
+        throw new CustomError.BadRequestError("Please provide avatar image");
+    }
+
     const minutesToExpire = 60;
     const verificationToken = makeVerificationToken(
         username,
         email,
-        role,
         password,
+        avatar,
         process.env.VERIFICATION_SECRET,
         minutesToExpire
     );
@@ -81,17 +86,8 @@ const register = async (req, res) => {
     });
 };
 
-const createProfile = async (req, res) => {
-    const {
-        verificationToken,
-        images,
-        age,
-        gender,
-        location,
-        hobbies,
-        biography,
-        school,
-    } = req.body;
+const verifyEmail = async (req, res) => {
+    const { verificationToken } = req.body;
     if (!verificationToken) {
         throw new CustomError.UnauthenticatedError("Cannot verify user");
     }
@@ -109,14 +105,14 @@ const createProfile = async (req, res) => {
     if (
         !decoded.hasOwnProperty("username") ||
         !decoded.hasOwnProperty("email") ||
-        !decoded.hasOwnProperty("role") ||
         !decoded.hasOwnProperty("password") ||
+        !decoded.hasOwnProperty("avatar") ||
         !decoded.hasOwnProperty("expirationDate")
     ) {
         throw new CustomError.UnauthenticatedError("Verification Failed");
     }
 
-    const { username, email, role, password, expirationDate } = decoded;
+    const { username, email, password, expirationDate } = decoded;
     const now = new Date();
 
     if (new Date(expirationDate).getTime() <= now.getTime()) {
@@ -130,65 +126,11 @@ const createProfile = async (req, res) => {
         throw new CustomError.BadRequestError("This email already exists");
     }
 
-    if (checkRole(email) === "admin") {
-        await User.create({
-            username: "admin",
-            email,
-            role,
-            password,
-        });
-
-        res.status(StatusCodes.OK).json({
-            msg: `Admin account is created!`,
-        });
-
-        return;
-    }
-
-    validateRequiredProfileInput(
-        images,
-        age,
-        gender,
-        location,
-        hobbies,
-        school
-    );
-
-    if (biography === undefined || biography.length > 500) {
-        throw new CustomError.BadRequestError(
-            "Biography must be defined and less than 500 characters"
-        );
-    }
-
-    let interestedGender;
-    if (gender === "Male") {
-        interestedGender = "Female";
-    } else if (gender === "Female") {
-        interestedGender = "Male";
-    } else {
-        interestedGender = "Other";
-    }
-
-    const interested = {
-        interestedGender,
-        interestedMinAge: age <= 23 ? 18 : age - 5,
-        interestedMaxAge: age + 5,
-        interestedLocations: [location],
-    };
-
     await User.create({
         username,
         email,
-        role,
         password,
-        images,
-        age,
-        gender,
-        location,
-        hobbies,
-        biography,
-        school,
-        interested,
+        avatar,
     });
 
     res.status(StatusCodes.OK).json({
@@ -260,7 +202,7 @@ const logout = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
-    if (!email) {
+    if (!email || !validator.isEmail(email)) {
         throw new CustomError.BadRequestError("Please provide a valid email");
     }
 
@@ -269,14 +211,14 @@ const forgotPassword = async (req, res) => {
         throw new CustomError.NotFoundError("This email does not exist");
     }
 
-    const { username, role, password } = user;
+    const { username, password, avatar } = user;
 
     const minutesToExpire = 10;
     const verificationToken = makeVerificationToken(
         username,
         email,
-        role,
         password,
+        avatar,
         process.env.VERIFICATION_SECRET,
         minutesToExpire
     );
@@ -329,8 +271,8 @@ const resetPassword = async (req, res) => {
     if (
         !decoded.hasOwnProperty("username") ||
         !decoded.hasOwnProperty("email") ||
-        !decoded.hasOwnProperty("role") ||
         !decoded.hasOwnProperty("password") ||
+        !decoded.hasOwnProperty("avatar") ||
         !decoded.hasOwnProperty("expirationDate")
     ) {
         throw new CustomError.UnauthenticatedError("Verification Failed");
@@ -360,7 +302,7 @@ const resetPassword = async (req, res) => {
 
 module.exports = {
     register,
-    createProfile,
+    verifyEmail,
     login,
     logout,
     forgotPassword,
