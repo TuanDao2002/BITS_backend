@@ -34,6 +34,11 @@ const BlogSchema = new mongoose.Schema(
             },
         },
 
+        content: {
+            type: String,
+            required: [true, "Please provide content"],
+        },
+
         timeToRead: {
             type: Number,
             required: true,

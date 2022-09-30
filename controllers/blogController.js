@@ -3,9 +3,10 @@ const CustomError = require("../errors");
 
 const User = require("../models/User");
 const Blog = require("../models/Blog");
+const mongoose = require("mongoose");
 
 const getAllBlogs = async (req, res) => {
-    const {
+    let {
         params: { sortType },
         query: { title, category, next_cursor },
     } = req;
@@ -19,6 +20,7 @@ const getAllBlogs = async (req, res) => {
         queryObject.category = category;
     }
 
+    const resultsLimitPerLoading = 10;
     if (next_cursor) {
         const [heartCount, createdAt, _id] = Buffer.from(next_cursor, "base64")
             .toString("ascii")
@@ -34,19 +36,124 @@ const getAllBlogs = async (req, res) => {
                 { heartCount: { $lt: heartCount } },
                 {
                     heartCount: heartCount,
-                    createdAt: { $lte: createdAt },
-                    _id: { $lt: _id },
+                    createdAt: { $lte: new Date(createdAt) },
+                    _id: { $lt: new mongoose.Types.ObjectId(_id) },
                 },
             ];
         }
     }
 
-    const resultsLimitPerLoading = 10;
+    let blogs = Blog.find(queryObject)
+        .select("-content")
+        .populate({ path: "user", select: "-password -_id" });
+
+    if (sortType === "latest") {
+        blogs = blogs.sort("-createdAt -_id");
+    } else if (sortType === "favorite") {
+        blogs = blogs.sort("-heartCount -createdAt -_id");
+    }
+
+    blogs = blogs.limit(resultsLimitPerLoading);
+    const results = await blogs;
+
+    const count = await Blog.countDocuments(queryObject);
+    const remainingResults = count - results.length;
+    next_cursor = null;
+    if (results.length !== count) {
+        const lastResult = results[results.length - 1];
+        next_cursor = Buffer.from(
+            lastResult.heartCount +
+                "_" +
+                lastResult.createdAt.toISOString() +
+                "_" +
+                lastResult._id
+        ).toString("base64");
+    }
+
+    res.status(StatusCodes.OK).json({
+        results,
+        remainingResults,
+        next_cursor,
+    });
 };
 
-const getUserBlogs = async (req, res) => {};
+const getUserBlogs = async (req, res) => {
+    let {
+        query: { next_cursor },
+        user: { userId },
+    } = req;
 
-const createBlog = async (req, res) => {};
+    const queryObject = {};
+    queryObject.user = userId;
+
+    const resultsLimitPerLoading = 10;
+    if (next_cursor) {
+        const [createdAt, _id] = Buffer.from(next_cursor, "base64")
+            .toString("ascii")
+            .split("_");
+
+        queryObject.createdAt = { $lte: createdAt };
+        queryObject._id = { $lt: _id };
+    }
+
+    let blogs = Blog.find(queryObject)
+        .select("-content")
+        .populate({ path: "user", select: "-password -_id" });
+
+    blogs = blogs.sort("-createdAt -_id");
+    blogs = blogs.limit(resultsLimitPerLoading);
+    const results = await blogs;
+
+    const count = await Blog.countDocuments(queryObject);
+    const remainingResults = count - results.length;
+    next_cursor = null;
+    if (results.length !== count) {
+        const lastResult = results[results.length - 1];
+        next_cursor = Buffer.from(
+            lastResult.createdAt.toISOString() + "_" + lastResult._id
+        ).toString("base64");
+    }
+
+    res.status(StatusCodes.OK).json({
+        results,
+        remainingResults,
+        next_cursor,
+    });
+};
+
+const createBlog = async (req, res) => {
+    const {
+        user: { userId },
+        body: { title, banner, category, content },
+    } = req;
+
+    if (!title) {
+        throw new CustomError.BadRequestError("Title not found");
+    }
+
+    if (!category) {
+        throw new CustomError.BadRequestError("Category not found");
+    }
+
+    if (!content) {
+        throw new CustomError.BadRequestError("Content not found");
+    }
+
+    const speedToRead = 300; // 300 words per minute
+
+    const newBlog = await Blog.create({
+        user: userId,
+        title,
+        description: content.slice(0, 500),
+        banner: banner ? banner : "default",
+        category,
+        content,
+        timeToRead: content.length / speedToRead,
+        heartCount: 0,
+    });
+
+    res.status(StatusCodes.OK).json({ blog: newBlog });
+};
 
 const updateBlog = async (req, res) => {};
 
