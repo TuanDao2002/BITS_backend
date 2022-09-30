@@ -2,7 +2,12 @@ const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
 
 const Blog = require("../models/Blog");
+const Like = require("../models/Like");
 const mongoose = require("mongoose");
+
+const verifyBlog = require("../utils/verifyBlog");
+const descriptionLength = 200;
+const speedToRead = 300; // 300 words per minute
 
 const getAllBlogs = async (req, res) => {
     let {
@@ -78,8 +83,8 @@ const getAllBlogs = async (req, res) => {
 
 const getUserBlogs = async (req, res) => {
     let {
-        query: { title, category, next_cursor },
         user: { userId },
+        query: { title, category, next_cursor },
     } = req;
 
     const queryObject = {};
@@ -147,30 +152,12 @@ const createBlog = async (req, res) => {
         body: { title, banner, category, content },
     } = req;
 
-    if (!title) {
-        throw new CustomError.BadRequestError("Title not found");
-    }
-
-    if (!category) {
-        throw new CustomError.BadRequestError("Category not found");
-    }
-
-    if (banner && !banner.match(/^https:\/\/res.cloudinary.com\//)) {
-        throw new CustomError.BadRequestError(
-            "Please provide a valid banner image"
-        );
-    }
-
-    if (!content) {
-        throw new CustomError.BadRequestError("Content not found");
-    }
-
-    const speedToRead = 300; // 300 words per minute
+    verifyBlog(title, banner, category, content);
 
     const newBlog = await Blog.create({
         user: userId,
         title,
-        description: content.slice(0, 200),
+        description: content.slice(0, descriptionLength),
         banner: banner ? banner : "default",
         category,
         content,
@@ -181,9 +168,106 @@ const createBlog = async (req, res) => {
     res.status(StatusCodes.OK).json({ blog: newBlog });
 };
 
-const updateBlog = async (req, res) => {};
+const updateBlog = async (req, res) => {
+    const {
+        user: { userId },
+        body: { blogId, title, banner, category, content },
+    } = req;
 
-const deleteBlog = async (req, res) => {};
+    verifyBlog(title, banner, category, content);
+
+    const blog = await Blog.findOne({ _id: blogId, user: userId });
+    if (!blog) {
+        throw new CustomError.BadRequestError(
+            "This blog does not exist or you are not allowed to edit this blog"
+        );
+    }
+
+    if (title) {
+        blog.title = title;
+    }
+
+    if (banner) {
+        blog.banner = banner;
+    }
+
+    if (category) {
+        blog.category = category;
+    }
+
+    if (content) {
+        blog.content = content;
+        blog.description = content.slice(0, descriptionLength);
+        blog.timeToRead = Math.ceil(content.length / speedToRead);
+    }
+
+    await blog.save();
+
+    res.status(StatusCodes.OK).json({ blog });
+};
+
+const deleteBlog = async (req, res) => {
+    const {
+        user: { userId },
+        params: { blogId },
+    } = req;
+
+    const blog = await Blog.findOne({ _id: blogId, user: userId });
+    if (!blog) {
+        throw new CustomError.BadRequestError(
+            "This blog does not exist or you are not allowed to delete this blog"
+        );
+    }
+
+    await blog.remove();
+    res.status(StatusCodes.OK).json({ msg: "Blog is removed" });
+};
+
+const likeBlog = async (req, res) => {
+    const {
+        user: { userId },
+        params: { blogId },
+    } = req;
+
+    const like = await Like.findOne({ user: userId, blog: blogId });
+    if (like) {
+        throw new CustomError.BadRequestError("You already liked this blog");
+    }
+
+    const blog = await Blog.findOne({ _id: blogId });
+    if (!blog) {
+        throw new CustomError.BadRequestError("This blog does not exist");
+    }
+
+    blog.heartCount++;
+    await blog.save();
+    await Like.create({ user: userId, blog: blogId });
+
+    await res.status(StatusCodes.OK).json({ blog });
+};
+
+const unLikeBlog = async (req, res) => {
+    const {
+        user: { userId },
+        params: { blogId },
+    } = req;
+
+    const like = await Like.findOne({ user: userId, blog: blogId });
+    if (!like) {
+        throw new CustomError.BadRequestError("You did not like this blog");
+    }
+
+    const blog = await Blog.findOne({ _id: blogId });
+    if (!blog) {
+        throw new CustomError.BadRequestError("This blog does not exist");
+    }
+
+    blog.heartCount--;
+    await blog.save();
+    await like.remove();
+
+    await res.status(StatusCodes.OK).json({ blog });
+};
 
 module.exports = {
     getAllBlogs,
@@ -192,4 +276,6 @@ module.exports = {
     createBlog,
     updateBlog,
     deleteBlog,
+    likeBlog,
+    unLikeBlog
 };
