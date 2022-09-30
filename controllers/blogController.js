@@ -135,6 +135,12 @@ const createBlog = async (req, res) => {
         throw new CustomError.BadRequestError("Category not found");
     }
 
+    if (banner && !banner.match(/^https:\/\/res.cloudinary.com\//)) {
+        throw new CustomError.BadRequestError(
+            "Please provide a valid banner image"
+        );
+    }
+
     if (!content) {
         throw new CustomError.BadRequestError("Content not found");
     }

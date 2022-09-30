@@ -16,6 +16,8 @@ const connectDB = require("./db/connect");
 
 // routers
 const authRouter = require("./routes/authRoutes");
+const imageRouter = require("./routes/imageRoutes");
+const blogRouter = require("./routes/blogRoutes");
 
 // error handler
 const notFoundMiddleware = require("./middleware/not-found");
@@ -48,6 +50,8 @@ cloudinary.config({
 
 // routes
 app.use("/api/auth", authRouter);
+app.use("/api/image", imageRouter);
+app.use("/api/blog", blogRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
