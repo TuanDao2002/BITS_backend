@@ -1,7 +1,6 @@
 const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
 
-const User = require("../models/User");
 const Blog = require("../models/Blog");
 const mongoose = require("mongoose");
 
@@ -13,7 +12,7 @@ const getAllBlogs = async (req, res) => {
 
     const queryObject = {};
     if (title) {
-        queryObject.title = title;
+        queryObject.title = { $regex: `${title}`, $options: "i" };
     }
 
     if (category) {
@@ -79,11 +78,19 @@ const getAllBlogs = async (req, res) => {
 
 const getUserBlogs = async (req, res) => {
     let {
-        query: { next_cursor },
+        query: { title, category, next_cursor },
         user: { userId },
     } = req;
 
     const queryObject = {};
+    if (title) {
+        queryObject.title = { $regex: `${title}`, $options: "i" };
+    }
+
+    if (category) {
+        queryObject.category = category;
+    }
+
     queryObject.user = userId;
 
     const resultsLimitPerLoading = 10;
@@ -121,6 +128,19 @@ const getUserBlogs = async (req, res) => {
     });
 };
 
+const getBlogContent = async (req, res) => {
+    const {
+        params: { blogId },
+    } = req;
+
+    const blog = await Blog.findOne({ _id: blogId });
+    if (!blog) {
+        throw new CustomError.BadRequestError("Blog not found");
+    }
+
+    res.status(StatusCodes.OK).json({ blog });
+};
+
 const createBlog = async (req, res) => {
     const {
         user: { userId },
@@ -150,11 +170,11 @@ const createBlog = async (req, res) => {
     const newBlog = await Blog.create({
         user: userId,
         title,
-        description: content.slice(0, 500),
+        description: content.slice(0, 200),
         banner: banner ? banner : "default",
         category,
         content,
-        timeToRead: content.length / speedToRead,
+        timeToRead: Math.ceil(content.length / speedToRead),
         heartCount: 0,
     });
 
@@ -168,6 +188,7 @@ const deleteBlog = async (req, res) => {};
 module.exports = {
     getAllBlogs,
     getUserBlogs,
+    getBlogContent,
     createBlog,
     updateBlog,
     deleteBlog,

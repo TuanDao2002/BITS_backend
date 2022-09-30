@@ -16,7 +16,7 @@ const BlogSchema = new mongoose.Schema(
 
         description: {
             type: String,
-            maxlength: [500, "Description's length must be less than 500"],
+            maxlength: [200, "Description's length must be less than 500"],
             required: true,
         },
 
@@ -54,3 +54,5 @@ const BlogSchema = new mongoose.Schema(
 );
 
 BlogSchema.index({ user: 1 }, { heartCount: 1, createdAt: -1 });
+
+module.exports = mongoose.model("Blog", BlogSchema);
