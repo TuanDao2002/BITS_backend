@@ -2,7 +2,7 @@ const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
 
 const Blog = require("../models/Blog");
-const Like = require("../models/Like");
+const BlogLike = require("../models/BlogLike");
 const mongoose = require("mongoose");
 
 const verifyBlog = require("../utils/verifyBlog");
@@ -229,7 +229,7 @@ const likeBlog = async (req, res) => {
         params: { blogId },
     } = req;
 
-    const like = await Like.findOne({ user: userId, blog: blogId });
+    const like = await BlogLike.findOne({ user: userId, blog: blogId });
     if (like) {
         throw new CustomError.BadRequestError("You already liked this blog");
     }
@@ -241,7 +241,7 @@ const likeBlog = async (req, res) => {
 
     blog.heartCount++;
     await blog.save();
-    await Like.create({ user: userId, blog: blogId });
+    await BlogLike.create({ user: userId, blog: blogId });
 
     await res.status(StatusCodes.OK).json({ blog });
 };
@@ -252,7 +252,7 @@ const unLikeBlog = async (req, res) => {
         params: { blogId },
     } = req;
 
-    const like = await Like.findOne({ user: userId, blog: blogId });
+    const like = await BlogLike.findOne({ user: userId, blog: blogId });
     if (!like) {
         throw new CustomError.BadRequestError("You did not like this blog");
     }
