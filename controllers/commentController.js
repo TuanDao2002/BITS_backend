@@ -5,7 +5,7 @@ const Comment = require("../models/Comment");
 const Blog = require("../models/Blog");
 
 const getComments = async (req, res) => {
-	const {
+	let {
 		params: { blogId },
 		query: { next_cursor },
 	} = req;

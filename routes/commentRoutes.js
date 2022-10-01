@@ -10,7 +10,7 @@ const {
 	deleteComment,
 } = require("../controllers/commentController");
 
-router.get("/view", authenticateUser, getComments);
+router.get("/view/:blogId", authenticateUser, getComments);
 router.post("/create", authenticateUser, createComment);
 router.put("/update", authenticateUser, updateComment);
 router.delete("/delete/:commentId", authenticateUser, deleteComment);
