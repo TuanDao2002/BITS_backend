@@ -21,9 +21,9 @@ const normalCharRegex = /^[A-Za-z0-9._-]*$/;
 const register = async (req, res) => {
     const { username, password, email, avatar } = req.body;
 
-    if (username.length < 1 || username.length > 22) {
+    if (username.length < 3 || username.length > 22) {
         throw new CustomError.BadRequestError(
-            "The username must have from 1 to 22 characters"
+            "The username must have from 3 to 22 characters"
         );
     }
 

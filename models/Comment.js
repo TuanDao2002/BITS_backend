@@ -28,6 +28,6 @@ const CommentSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
-CommentSchema.index({ blog: 1 }, { user: 1 }, { createdAt: -1, blog: 1 });
+CommentSchema.index({ blog: 1 }, { user: 1 }, { createdAt: 1, blog: 1 });
 
-module.exports = mongoose.model("Blog", BlogSchema);
+module.exports = mongoose.model("Comment", CommentSchema);
