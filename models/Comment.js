@@ -30,4 +30,8 @@ const CommentSchema = new mongoose.Schema(
 
 CommentSchema.index({ blog: 1 }, { user: 1 }, { createdAt: 1, blog: 1 });
 
+CommentSchema.pre("remove", async function () {
+	await this.model("CommentLike").deleteMany({ comment: this._id });
+});
+
 module.exports = mongoose.model("Comment", CommentSchema);

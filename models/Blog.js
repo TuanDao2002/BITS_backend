@@ -56,7 +56,11 @@ const BlogSchema = new mongoose.Schema(
 BlogSchema.index({ user: 1 }, { heartCount: 1, createdAt: -1 });
 
 BlogSchema.pre("remove", async function () {
-	await this.model("Comment").deleteMany({ blog: this._id });
+	const comments = await this.model("Comment").find({ blog: this._id });
+	for (let comment of comments) {
+		await comment.remove();
+	}
+
 	await this.model("BlogLike").deleteMany({ blog: this._id });
 });
 

@@ -2,6 +2,7 @@ const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
 
 const Comment = require("../models/Comment");
+const CommentLike = require("../models/CommentLike");
 const Blog = require("../models/Blog");
 
 const getComments = async (req, res) => {
@@ -10,7 +11,7 @@ const getComments = async (req, res) => {
 		query: { next_cursor },
 	} = req;
 
-	const blog = Blog.findOne({ _id: blogId });
+	const blog = await Blog.findOne({ _id: blogId });
 	if (!blog) {
 		throw new CustomError.BadRequestError("This blog does not exist");
 	}
@@ -60,7 +61,7 @@ const createComment = async (req, res) => {
 		body: { blogId, content },
 	} = req;
 
-	const blog = Blog.findOne({ _id: blogId });
+	const blog = await Blog.findOne({ _id: blogId });
 	if (!blog) {
 		throw new CustomError.BadRequestError("This blog does not exist");
 	}
@@ -111,9 +112,57 @@ const deleteComment = async (req, res) => {
 	res.status(StatusCodes.OK).json({ msg: "Comment is removed" });
 };
 
+const likeComment = async (req, res) => {
+	const {
+		user: { userId },
+		params: { commentId },
+	} = req;
+
+	const like = await CommentLike.findOne({ user: userId, comment: commentId });
+	if (like) {
+		throw new CustomError.BadRequestError("You already liked this comment");
+	}
+
+	const comment = await Comment.findOne({ _id: commentId });
+	if (!comment) {
+		throw new CustomError.BadRequestError("This comment does not exist");
+	}
+
+	comment.heartCount++;
+	await comment.save();
+	await CommentLike.create({ user: userId, comment: commentId });
+
+	await res.status(StatusCodes.OK).json({ comment });
+};
+
+const unLikeComment = async (req, res) => {
+	const {
+		user: { userId },
+		params: { commentId },
+	} = req;
+
+	const like = await CommentLike.findOne({ user: userId, comment: commentId });
+	if (!like) {
+		throw new CustomError.BadRequestError("You did not like this comment");
+	}
+
+	const comment = await Comment.findOne({ _id: commentId });
+	if (!comment) {
+		throw new CustomError.BadRequestError("This comment does not exist");
+	}
+
+	comment.heartCount--;
+	await comment.save();
+	await like.remove();
+
+	await res.status(StatusCodes.OK).json({ comment });
+};
+
 module.exports = {
 	getComments,
 	createComment,
 	updateComment,
 	deleteComment,
+	likeComment,
+	unLikeComment
 };
