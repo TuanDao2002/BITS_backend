@@ -2,29 +2,35 @@ require("dotenv").config();
 
 const connectDB = require("./db/connect");
 const Blog = require("./models/Blog");
+const Comment = require("./models/Comment");
 
 // content in each blog is converted to UTF-8 to be stored as HTML
 const jsonBlogs = require("./blog.json");
+const jsonComments = require("./comment.json");
 
 const descriptionLength = 200;
 const speedToRead = 300; // 300 words per minute
 const start = async () => {
 	try {
 		await connectDB(process.env.MONGO_URI);
-		await Blog.deleteMany();
-		for (let blog of jsonBlogs) {
-			const { user, title, banner, category, content } = blog;
-			await Blog.create({
-				user,
-				title,
-				description: content.slice(0, descriptionLength),
-				banner: banner ? banner : "default",
-				category,
-				content,
-				timeToRead: Math.ceil(content.length / speedToRead),
-				heartCount: 0,
-			});
-		}
+		// await Blog.deleteMany();
+		// for (let blog of jsonBlogs) {
+		// 	const { user, title, banner, category, content } = blog;
+		// 	await Blog.create({
+		// 		user,
+		// 		title,
+		// 		description: content.slice(0, descriptionLength),
+		// 		banner: banner ? banner : "default",
+		// 		category,
+		// 		content,
+		// 		timeToRead: Math.ceil(content.length / speedToRead),
+		// 		heartCount: 0,
+		// 	});
+		// }
+
+		await Comment.deleteMany();
+		await Comment.insertMany(jsonComments);
+
 		console.log("Success!!!!");
 		process.exit(0);
 	} catch (error) {

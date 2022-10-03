@@ -44,7 +44,7 @@ const getComments = async (req, res) => {
 	if (results.length !== count) {
 		const lastResult = results[results.length - 1];
 		next_cursor = Buffer.from(
-			"_" + lastResult.createdAt.toISOString() + "_" + lastResult._id
+			lastResult.createdAt.toISOString() + "_" + lastResult._id
 		).toString("base64");
 	}
 
@@ -164,5 +164,5 @@ module.exports = {
 	updateComment,
 	deleteComment,
 	likeComment,
-	unLikeComment
+	unLikeComment,
 };
