@@ -10,7 +10,7 @@ const BlogSchema = new mongoose.Schema(
 
 		title: {
 			type: String,
-			maxlength: [100, "Title's length must be less than 100"],
+			maxlength: [300, "Title's length must be less than 100"],
 			required: true,
 		},
 
@@ -29,7 +29,7 @@ const BlogSchema = new mongoose.Schema(
 			type: String,
 			required: [true, "Please provide category"],
 			enum: {
-				values: ["AI/ML", "Cloud computing", "Big Data", "Security"],
+				values: ["AI", "Cloud computing", "Big Data", "Security", "DevOps", "Blockchain"],
 				message: "{VALUE} is not a supported category", // Error message
 			},
 		},
