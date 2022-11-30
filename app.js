@@ -30,7 +30,11 @@ app.use(helmet());
 app.use(
 	cors({
 		credentials: true,
-		origin: [process.env.REACT_APP_LINK, "http://localhost:3000"], // only allow website in this domain too access the resource of this server
+		origin: [
+			process.env.REACT_APP_LINK,
+			"http://localhost:3000",
+			"https://rmit-blog.netlify.app",
+		], // only allow website in this domain too access the resource of this server
 	})
 );
 app.use(xss());
