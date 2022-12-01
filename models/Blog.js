@@ -29,7 +29,14 @@ const BlogSchema = new mongoose.Schema(
 			type: String,
 			required: [true, "Please provide category"],
 			enum: {
-				values: ["AI", "Cloud computing", "Big Data", "Security", "DevOps", "Blockchain"],
+				values: [
+					"AI",
+					"Cloud computing",
+					"Big Data",
+					"Security",
+					"DevOps",
+					"Blockchain",
+				],
 				message: "{VALUE} is not a supported category", // Error message
 			},
 		},
@@ -50,10 +57,22 @@ const BlogSchema = new mongoose.Schema(
 			required: true,
 		},
 	},
-	{ timestamps: true }
+	{
+		timestamps: true,
+		toJSON: { virtuals: true },
+		toObject: { virtuals: true },
+		id: false,
+	}
 );
 
 BlogSchema.index({ user: 1 }, { heartCount: 1, createdAt: -1 });
+
+BlogSchema.virtual("likes", {
+	ref: "BlogLike",
+	localField: "_id",
+	foreignField: "blog",
+	justOne: false,
+});
 
 BlogSchema.pre("remove", async function () {
 	const comments = await this.model("Comment").find({ blog: this._id });

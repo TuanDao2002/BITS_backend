@@ -138,7 +138,15 @@ const getBlogContent = async (req, res) => {
 		params: { blogId },
 	} = req;
 
-	const blog = await Blog.findOne({ _id: blogId });
+	const blog = await Blog.findOne({ _id: blogId }).populate({
+		path: "likes",
+		select: "_id user",
+		populate: {
+			path: "user",
+			select: "-password",
+		},
+	});
+	
 	if (!blog) {
 		throw new CustomError.BadRequestError("Blog not found");
 	}

@@ -25,10 +25,22 @@ const CommentSchema = new mongoose.Schema(
 			required: true,
 		},
 	},
-	{ timestamps: true }
+	{
+		timestamps: true,
+		toJSON: { virtuals: true },
+		toObject: { virtuals: true },
+		id: false,
+	}
 );
 
 CommentSchema.index({ blog: 1 }, { user: 1 }, { createdAt: 1, blog: 1 });
+
+CommentSchema.virtual("likes", {
+	ref: "CommentLike",
+	localField: "_id",
+	foreignField: "comment",
+	justOne: false,
+});
 
 CommentSchema.pre("remove", async function () {
 	await this.model("CommentLike").deleteMany({ comment: this._id });

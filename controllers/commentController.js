@@ -29,14 +29,23 @@ const getComments = async (req, res) => {
 		queryObject._id = { $gt: _id };
 	}
 
-	let comments = Comment.find(queryObject).populate({
-		path: "user",
-		select: "-password",
-	});
+	let comments = Comment.find(queryObject);
 
 	comments = comments.sort("createdAt _id");
 	comments = comments.limit(resultsLimitPerLoading);
-	const results = await comments;
+	const results = await comments
+		.populate({
+			path: "user",
+			select: "-password",
+		})
+		.populate({
+			path: "likes",
+			select: "_id user",
+			populate: {
+				path: "user",
+				select: "-password",
+			},
+		});
 
 	const count = await Comment.countDocuments(queryObject);
 	const remainingResults = count - results.length;
