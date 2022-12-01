@@ -40,7 +40,7 @@ const getComments = async (req, res) => {
 		})
 		.populate({
 			path: "likes",
-			select: "_id user",
+			select: "_id user -comment",
 			populate: {
 				path: "user",
 				select: "-password",

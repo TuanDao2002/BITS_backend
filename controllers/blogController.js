@@ -140,7 +140,7 @@ const getBlogContent = async (req, res) => {
 
 	const blog = await Blog.findOne({ _id: blogId }).populate({
 		path: "likes",
-		select: "_id user",
+		select: "_id user -blog",
 		populate: {
 			path: "user",
 			select: "-password",
