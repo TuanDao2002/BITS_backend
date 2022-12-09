@@ -132,14 +132,24 @@ const likeComment = async (req, res) => {
 		throw new CustomError.BadRequestError("You already liked this comment");
 	}
 
-	const comment = await Comment.findOne({ _id: commentId });
+	let comment = await Comment.findOne({ _id: commentId });
 	if (!comment) {
 		throw new CustomError.BadRequestError("This comment does not exist");
 	}
 
 	comment.heartCount++;
-	await comment.save();
 	await CommentLike.create({ user: userId, comment: commentId });
+	comment = await comment.save();
+	comment = await comment
+		.populate({
+			path: "likes",
+			select: "_id user -comment",
+			populate: {
+				path: "user",
+				select: "-password",
+			},
+		})
+		.execPopulate();
 
 	await res.status(StatusCodes.OK).json({ comment });
 };
@@ -155,14 +165,24 @@ const unLikeComment = async (req, res) => {
 		throw new CustomError.BadRequestError("You did not like this comment");
 	}
 
-	const comment = await Comment.findOne({ _id: commentId });
+	let comment = await Comment.findOne({ _id: commentId });
 	if (!comment) {
 		throw new CustomError.BadRequestError("This comment does not exist");
 	}
 
 	comment.heartCount--;
-	await comment.save();
 	await like.remove();
+	comment = await comment.save();
+	comment = await comment
+		.populate({
+			path: "likes",
+			select: "_id user -comment",
+			populate: {
+				path: "user",
+				select: "-password",
+			},
+		})
+		.execPopulate();
 
 	await res.status(StatusCodes.OK).json({ comment });
 };

@@ -10,296 +10,302 @@ const descriptionLength = 200;
 const speedToRead = 300; // 300 words per minute
 
 const getAllBlogs = async (req, res) => {
-    let {
-        params: { sortType },
-        query: { title, category, next_cursor },
-    } = req;
+	let {
+		params: { sortType },
+		query: { title, category, next_cursor },
+	} = req;
 
-    const queryObject = {};
-    if (title) {
-        queryObject.title = { $regex: `${title}`, $options: "i" };
-    }
+	const queryObject = {};
+	if (title) {
+		queryObject.title = { $regex: `${title}`, $options: "i" };
+	}
 
-    if (category) {
-        queryObject.category = category;
-    }
+	if (category) {
+		queryObject.category = category;
+	}
 
-    const resultsLimitPerLoading = 10;
-    if (next_cursor) {
-        const [heartCount, createdAt, _id] = Buffer.from(next_cursor, "base64")
-            .toString("ascii")
-            .split("_");
+	const resultsLimitPerLoading = 10;
+	if (next_cursor) {
+		const [heartCount, createdAt, _id] = Buffer.from(next_cursor, "base64")
+			.toString("ascii")
+			.split("_");
 
-        if (sortType === "latest") {
-            queryObject.createdAt = { $lte: createdAt };
-            queryObject._id = { $lt: _id };
-        }
+		if (sortType === "latest") {
+			queryObject.createdAt = { $lte: createdAt };
+			queryObject._id = { $lt: _id };
+		}
 
-        if (sortType === "favorite") {
-            queryObject.$or = [
-                { heartCount: { $lt: heartCount } },
-                {
-                    heartCount: heartCount,
-                    createdAt: { $lte: new Date(createdAt) },
-                    _id: { $lt: new mongoose.Types.ObjectId(_id) },
-                },
-            ];
-        }
-    }
+		if (sortType === "favorite") {
+			queryObject.$or = [
+				{ heartCount: { $lt: heartCount } },
+				{
+					heartCount: heartCount,
+					createdAt: { $lte: new Date(createdAt) },
+					_id: { $lt: new mongoose.Types.ObjectId(_id) },
+				},
+			];
+		}
+	}
 
-    let blogs = Blog.find(queryObject)
-        .select("-content")
-        .populate({ path: "user", select: "-password" });
+	let blogs = Blog.find(queryObject)
+		.select("-content")
+		.populate({ path: "user", select: "-password" });
 
-    if (sortType === "latest") {
-        blogs = blogs.sort("-createdAt -_id");
-    } else if (sortType === "favorite") {
-        blogs = blogs.sort("-heartCount -createdAt -_id");
-    }
+	if (sortType === "latest") {
+		blogs = blogs.sort("-createdAt -_id");
+	} else if (sortType === "favorite") {
+		blogs = blogs.sort("-heartCount -createdAt -_id");
+	}
 
-    blogs = blogs.limit(resultsLimitPerLoading);
-    const results = await blogs;
+	blogs = blogs.limit(resultsLimitPerLoading);
+	const results = await blogs;
 
-    const count = await Blog.countDocuments(queryObject);
-    const remainingResults = count - results.length;
-    next_cursor = null;
-    if (results.length !== count) {
-        const lastResult = results[results.length - 1];
-        next_cursor = Buffer.from(
-            lastResult.heartCount +
-                "_" +
-                lastResult.createdAt.toISOString() +
-                "_" +
-                lastResult._id
-        ).toString("base64");
-    }
+	const count = await Blog.countDocuments(queryObject);
+	const remainingResults = count - results.length;
+	next_cursor = null;
+	if (results.length !== count) {
+		const lastResult = results[results.length - 1];
+		next_cursor = Buffer.from(
+			lastResult.heartCount +
+				"_" +
+				lastResult.createdAt.toISOString() +
+				"_" +
+				lastResult._id
+		).toString("base64");
+	}
 
-    res.status(StatusCodes.OK).json({
-        results,
-        remainingResults,
-        next_cursor,
-    });
+	res.status(StatusCodes.OK).json({
+		results,
+		remainingResults,
+		next_cursor,
+	});
 };
 
 const getUserBlogs = async (req, res) => {
-    let {
-        user: { userId },
-        query: { title, category, next_cursor },
-    } = req;
+	let {
+		user: { userId },
+		query: { title, category, next_cursor },
+	} = req;
 
-    const queryObject = {};
-    if (title) {
-        queryObject.title = { $regex: `${title}`, $options: "i" };
-    }
+	const queryObject = {};
+	if (title) {
+		queryObject.title = { $regex: `${title}`, $options: "i" };
+	}
 
-    if (category) {
-        queryObject.category = category;
-    }
+	if (category) {
+		queryObject.category = category;
+	}
 
-    queryObject.user = userId;
+	queryObject.user = userId;
 
-    const resultsLimitPerLoading = 10;
-    if (next_cursor) {
-        const [createdAt, _id] = Buffer.from(next_cursor, "base64")
-            .toString("ascii")
-            .split("_");
+	const resultsLimitPerLoading = 10;
+	if (next_cursor) {
+		const [createdAt, _id] = Buffer.from(next_cursor, "base64")
+			.toString("ascii")
+			.split("_");
 
-        queryObject.createdAt = { $lte: createdAt };
-        queryObject._id = { $lt: _id };
-    }
+		queryObject.createdAt = { $lte: createdAt };
+		queryObject._id = { $lt: _id };
+	}
 
-    let blogs = Blog.find(queryObject)
-        .select("-content")
-        .populate({ path: "user", select: "-password" });
+	let blogs = Blog.find(queryObject)
+		.select("-content")
+		.populate({ path: "user", select: "-password" });
 
-    blogs = blogs.sort("-createdAt -_id");
-    blogs = blogs.limit(resultsLimitPerLoading);
-    const results = await blogs;
+	blogs = blogs.sort("-createdAt -_id");
+	blogs = blogs.limit(resultsLimitPerLoading);
+	const results = await blogs;
 
-    const count = await Blog.countDocuments(queryObject);
-    const remainingResults = count - results.length;
-    next_cursor = null;
-    if (results.length !== count) {
-        const lastResult = results[results.length - 1];
-        next_cursor = Buffer.from(
-            lastResult.createdAt.toISOString() + "_" + lastResult._id
-        ).toString("base64");
-    }
+	const count = await Blog.countDocuments(queryObject);
+	const remainingResults = count - results.length;
+	next_cursor = null;
+	if (results.length !== count) {
+		const lastResult = results[results.length - 1];
+		next_cursor = Buffer.from(
+			lastResult.createdAt.toISOString() + "_" + lastResult._id
+		).toString("base64");
+	}
 
-    res.status(StatusCodes.OK).json({
-        results,
-        remainingResults,
-        next_cursor,
-    });
+	res.status(StatusCodes.OK).json({
+		results,
+		remainingResults,
+		next_cursor,
+	});
 };
 
 const getBlogContent = async (req, res) => {
-    const {
-        params: { blogId },
-    } = req;
+	const {
+		params: { blogId },
+	} = req;
 
-    const blog = await Blog.findOne({ _id: blogId }).populate({
-        path: "likes",
-        select: "_id user -blog",
-        populate: {
-            path: "user",
-            select: "-password",
-        },
-    });
+	const blog = await Blog.findOne({ _id: blogId }).populate({
+		path: "likes",
+		select: "_id user -blog",
+		populate: {
+			path: "user",
+			select: "-password",
+		},
+	});
 
-    if (!blog) {
-        throw new CustomError.BadRequestError("Blog not found");
-    }
+	if (!blog) {
+		throw new CustomError.BadRequestError("Blog not found");
+	}
 
-    res.status(StatusCodes.OK).json({ blog });
+	res.status(StatusCodes.OK).json({ blog });
 };
 
 const createBlog = async (req, res) => {
-    const {
-        user: { userId },
-        body: { title, banner, category, content },
-    } = req;
+	const {
+		user: { userId },
+		body: { title, banner, category, content },
+	} = req;
 
-    verifyBlog(title, banner, category, content);
+	verifyBlog(title, banner, category, content);
 
-    const newBlog = await Blog.create({
-        user: userId,
-        title,
-        description: content.slice(0, descriptionLength),
-        banner: banner ? banner : "default",
-        category,
-        content,
-        timeToRead: Math.ceil(content.length / speedToRead),
-        heartCount: 0,
-    });
+	const newBlog = await Blog.create({
+		user: userId,
+		title,
+		description: content.slice(0, descriptionLength),
+		banner: banner ? banner : "default",
+		category,
+		content,
+		timeToRead: Math.ceil(content.length / speedToRead),
+		heartCount: 0,
+	});
 
-    res.status(StatusCodes.OK).json({ blog: newBlog });
+	res.status(StatusCodes.OK).json({ blog: newBlog });
 };
 
 const updateBlog = async (req, res) => {
-    const {
-        user: { userId },
-        body: { blogId, title, banner, category, content },
-    } = req;
+	const {
+		user: { userId },
+		body: { blogId, title, banner, category, content },
+	} = req;
 
-    verifyBlog(title, banner, category, content);
+	verifyBlog(title, banner, category, content);
 
-    const blog = await Blog.findOne({ _id: blogId, user: userId });
-    if (!blog) {
-        throw new CustomError.BadRequestError(
-            "This blog does not exist or you are not allowed to edit this blog"
-        );
-    }
+	const blog = await Blog.findOne({ _id: blogId, user: userId });
+	if (!blog) {
+		throw new CustomError.BadRequestError(
+			"This blog does not exist or you are not allowed to edit this blog"
+		);
+	}
 
-    if (title) {
-        blog.title = title;
-    }
+	if (title) {
+		blog.title = title;
+	}
 
-    if (banner) {
-        blog.banner = banner;
-    }
+	if (banner) {
+		blog.banner = banner;
+	}
 
-    if (category) {
-        blog.category = category;
-    }
+	if (category) {
+		blog.category = category;
+	}
 
-    if (content) {
-        blog.content = content;
-        blog.description = content.slice(0, descriptionLength);
-        blog.timeToRead = Math.ceil(content.length / speedToRead);
-    }
+	if (content) {
+		blog.content = content;
+		blog.description = content.slice(0, descriptionLength);
+		blog.timeToRead = Math.ceil(content.length / speedToRead);
+	}
 
-    await blog.save();
+	await blog.save();
 
-    res.status(StatusCodes.OK).json({ blog });
+	res.status(StatusCodes.OK).json({ blog });
 };
 
 const deleteBlog = async (req, res) => {
-    const {
-        user: { userId },
-        params: { blogId },
-    } = req;
+	const {
+		user: { userId },
+		params: { blogId },
+	} = req;
 
-    const blog = await Blog.findOne({ _id: blogId, user: userId });
-    if (!blog) {
-        throw new CustomError.BadRequestError(
-            "This blog does not exist or you are not allowed to delete this blog"
-        );
-    }
+	const blog = await Blog.findOne({ _id: blogId, user: userId });
+	if (!blog) {
+		throw new CustomError.BadRequestError(
+			"This blog does not exist or you are not allowed to delete this blog"
+		);
+	}
 
-    await blog.remove();
-    res.status(StatusCodes.OK).json({ msg: "Blog is removed" });
+	await blog.remove();
+	res.status(StatusCodes.OK).json({ msg: "Blog is removed" });
 };
 
 const likeBlog = async (req, res) => {
-    const {
-        user: { userId },
-        params: { blogId },
-    } = req;
+	const {
+		user: { userId },
+		params: { blogId },
+	} = req;
 
-    const like = await BlogLike.findOne({ user: userId, blog: blogId });
-    if (like) {
-        throw new CustomError.BadRequestError("You already liked this blog");
-    }
+	const like = await BlogLike.findOne({ user: userId, blog: blogId });
+	if (like) {
+		throw new CustomError.BadRequestError("You already liked this blog");
+	}
 
-    const blog = await Blog.findOne({ _id: blogId }).populate({
-        path: "likes",
-        select: "_id user -blog",
-        populate: {
-            path: "user",
-            select: "-password",
-        },
-    });
+	let blog = await Blog.findOne({ _id: blogId });
 
-    if (!blog) {
-        throw new CustomError.BadRequestError("This blog does not exist");
-    }
+	if (!blog) {
+		throw new CustomError.BadRequestError("This blog does not exist");
+	}
 
-    blog.heartCount++;
-    await blog.save();
-    await BlogLike.create({ user: userId, blog: blogId });
+	blog.heartCount++;
+	await BlogLike.create({ user: userId, blog: blogId });
+	blog = await blog.save();
+	blog = await blog
+		.populate({
+			path: "likes",
+			select: "_id user -blog",
+			populate: {
+				path: "user",
+				select: "-password",
+			},
+		})
+		.execPopulate();
 
-    await res.status(StatusCodes.OK).json({ blog });
+	await res.status(StatusCodes.OK).json({ blog });
 };
 
 const unLikeBlog = async (req, res) => {
-    const {
-        user: { userId },
-        params: { blogId },
-    } = req;
+	const {
+		user: { userId },
+		params: { blogId },
+	} = req;
 
-    const like = await BlogLike.findOne({ user: userId, blog: blogId });
-    if (!like) {
-        throw new CustomError.BadRequestError("You did not like this blog");
-    }
+	const like = await BlogLike.findOne({ user: userId, blog: blogId });
+	if (!like) {
+		throw new CustomError.BadRequestError("You did not like this blog");
+	}
 
-    const blog = await Blog.findOne({ _id: blogId }).populate({
-        path: "likes",
-        select: "_id user -blog",
-        populate: {
-            path: "user",
-            select: "-password",
-        },
-    });
+	let blog = await Blog.findOne({ _id: blogId });
 
-    if (!blog) {
-        throw new CustomError.BadRequestError("This blog does not exist");
-    }
+	if (!blog) {
+		throw new CustomError.BadRequestError("This blog does not exist");
+	}
 
-    blog.heartCount--;
-    await blog.save();
-    await like.remove();
+	blog.heartCount--;
+	await like.remove();
+	blog = await blog.save();
+	blog = await blog
+		.populate({
+			path: "likes",
+			select: "_id user -blog",
+			populate: {
+				path: "user",
+				select: "-password",
+			},
+		})
+		.execPopulate();
 
-    await res.status(StatusCodes.OK).json({ blog });
+	await res.status(StatusCodes.OK).json({ blog });
 };
 
 module.exports = {
-    getAllBlogs,
-    getUserBlogs,
-    getBlogContent,
-    createBlog,
-    updateBlog,
-    deleteBlog,
-    likeBlog,
-    unLikeBlog,
+	getAllBlogs,
+	getUserBlogs,
+	getBlogContent,
+	createBlog,
+	updateBlog,
+	deleteBlog,
+	likeBlog,
+	unLikeBlog,
 };
