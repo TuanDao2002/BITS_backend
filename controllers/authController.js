@@ -70,10 +70,7 @@ const register = async (req, res) => {
         minutesToExpire
     );
 
-    const origin =
-        process.env.NODE_ENV === "dev"
-            ? "http://localhost:3000"
-            : process.env.REACT_APP_LINK; // later this is the origin link of React client side
+    const origin = process.env.REACT_APP_LINK; // later this is the origin link of React client side
     await sendVerificationEmail(
         req.useragent.browser,
         email,
@@ -224,10 +221,7 @@ const forgotPassword = async (req, res) => {
         minutesToExpire
     );
 
-    const origin =
-        process.env.NODE_ENV === "dev"
-            ? "http://localhost:3000"
-            : process.env.REACT_APP_LINK; // later this is the origin link of React client side
+    const origin = process.env.REACT_APP_LINK; // later this is the origin link of React client side
     await sendResetPasswordEmail(
         req.useragent.browser,
         email,
