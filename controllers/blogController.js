@@ -83,8 +83,7 @@ const getAllBlogs = async (req, res) => {
 
 const getUserBlogs = async (req, res) => {
 	let {
-		user: { userId },
-		query: { title, category, next_cursor },
+		query: { title, category, userId, next_cursor },
 	} = req;
 
 	const queryObject = {};

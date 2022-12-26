@@ -4,18 +4,18 @@ const router = express.Router();
 const { authenticateUser } = require("../middleware/authentication");
 
 const {
-    getAllBlogs,
-    getUserBlogs,
-    getBlogContent,
-    createBlog,
-    updateBlog,
-    deleteBlog,
-    likeBlog,
-    unLikeBlog
+	getAllBlogs,
+	getUserBlogs,
+	getBlogContent,
+	createBlog,
+	updateBlog,
+	deleteBlog,
+	likeBlog,
+	unLikeBlog,
 } = require("../controllers/blogController");
 
 router.get("/view/:sortType", getAllBlogs);
-router.get("/user", authenticateUser, getUserBlogs);
+router.get("/user", getUserBlogs);
 router.get("/content/:blogId", getBlogContent);
 router.post("/create", authenticateUser, createBlog);
 router.put("/update", authenticateUser, updateBlog);
